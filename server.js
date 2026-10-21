@@ -6,7 +6,7 @@ require('dotenv').config();
 // Route Imports
 const serviceRoutes = require('./routes/serviceRoutes');
 const operatorRoutes = require('./routes/operatorRoutes');
-
+app.use('/api/operator', operatorRoutes);
 const app = express();  
 
 // Middleware  
