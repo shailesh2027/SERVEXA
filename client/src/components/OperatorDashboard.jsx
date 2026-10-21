@@ -1,6 +1,10 @@
 import React, { useState, useEffect } from 'react';
 
 export default function OperatorDashboard() {
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  
   const [queue, setQueue] = useState([]);
   const [requestId, setRequestId] = useState('');
   const [enteredPIN, setEnteredPIN] = useState('');
@@ -8,13 +12,59 @@ export default function OperatorDashboard() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // 1. Live Queue Fetch Karne Ke Liye
-  const fetchQueue = async () => {
+  const API_BASE = 'https://servexa-ym6x.onrender.com';
+
+  // Check login status on component mount
+  useEffect(() => {
+    const token = localStorage.getItem('operatorToken');
+    if (token) {
+      setIsLoggedIn(true);
+      fetchQueue(token);
+    }
+  }, []);
+
+  // Handle Operator Login
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    setError(null);
     try {
-      const res = await fetch('https://servexa-ym6x.onrender.com/api/operator/queue');
+      const res = await fetch(`${API_BASE}/api/operator/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        localStorage.setItem('operatorToken', data.token);
+        setIsLoggedIn(true);
+        fetchQueue(data.token);
+      } else {
+        setError(data.message || 'Invalid operator credentials!');
+      }
+    } catch (err) {
+      setError('Login network error: ' + err.message);
+    }
+  };
+
+  // Handle Logout
+  const handleLogout = () => {
+    localStorage.removeItem('operatorToken');
+    setIsLoggedIn(false);
+    setQueue([]);
+    setVerificationResult(null);
+  };
+
+  // 1. Live Queue Fetch Karne Ke Liye (With Authorization Header)
+  const fetchQueue = async (token = localStorage.getItem('operatorToken')) => {
+    try {
+      const res = await fetch(`${API_BASE}/api/operator/queue`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
       const data = await res.json();
       if (res.ok) {
         setQueue(data.data || []);
+      } else if (res.status === 401 || res.status === 403) {
+        handleLogout(); // Token expired or unauthorized
       }
     } catch (err) {
       console.error('Failed to fetch queue', err);
@@ -22,10 +72,10 @@ export default function OperatorDashboard() {
   };
 
   useEffect(() => {
-    fetchQueue();
-    const interval = setInterval(fetchQueue, 5000); // Har 5 seconds mein queue refresh hogi
+    if (!isLoggedIn) return;
+    const interval = setInterval(() => fetchQueue(), 5000); // Har 5 seconds mein queue refresh hogi
     return () => clearInterval(interval);
-  }, []);
+  }, [isLoggedIn]);
 
   // Queue item par click karne se Request ID aur PIN automatically fill ho jayenge
   const handleSelectItem = (item) => {
@@ -46,10 +96,14 @@ export default function OperatorDashboard() {
     setError(null);
     setVerificationResult(null);
 
+    const token = localStorage.getItem('operatorToken');
     try {
-      const res = await fetch('https://servexa-ym6x.onrender.com/api/operator/verify-pin', {
+      const res = await fetch(`${API_BASE}/api/operator/verify-pin`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify({ requestId, enteredPIN }),
       });
 
@@ -68,9 +122,13 @@ export default function OperatorDashboard() {
 
   // 3. Job Complete & Vault Purge Karne Ke Liye
   const handleComplete = async (id) => {
+    const token = localStorage.getItem('operatorToken');
     try {
-      const res = await fetch(`https://servexa-ym6x.onrender.com/api/operator/complete/${id}`, {
+      const res = await fetch(`${API_BASE}/api/operator/complete/${id}`, {
         method: 'POST',
+        headers: { 
+          'Authorization': `Bearer ${token}`
+        },
       });
 
       const data = await res.json();
@@ -79,7 +137,7 @@ export default function OperatorDashboard() {
         setVerificationResult(null);
         setRequestId('');
         setEnteredPIN('');
-        fetchQueue();
+        fetchQueue(token);
       } else {
         alert('Failed to complete service.');
       }
@@ -88,12 +146,70 @@ export default function OperatorDashboard() {
     }
   };
 
+  // -----------------------------------------
+  // LOGIN SCREEN (Agar Operator Logged In Nahi Hai)
+  // -----------------------------------------
+  if (!isLoggedIn) {
+    return (
+      <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center p-4">
+        <div className="bg-gray-800 p-8 rounded-2xl shadow-xl border border-gray-700 w-full max-w-md space-y-6">
+          <div className="text-center space-y-2">
+            <h1 className="text-2xl font-bold text-cyan-400">SERVEXA Operator</h1>
+            <p className="text-xs text-gray-400">Secure Kiosk Authentication Portal</p>
+          </div>
+          <form onSubmit={handleLogin} className="space-y-4">
+            <div>
+              <label className="block text-xs text-gray-400 mb-1">Operator Username</label>
+              <input 
+                type="text" 
+                placeholder="Enter username"
+                value={username} 
+                onChange={(e) => setUsername(e.target.value)} 
+                className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                required 
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-gray-400 mb-1">Password</label>
+              <input 
+                type="password" 
+                placeholder="Enter password"
+                value={password} 
+                onChange={(e) => setPassword(e.target.value)} 
+                className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                required 
+              />
+            </div>
+            <button 
+              type="submit" 
+              className="w-full bg-cyan-600 hover:bg-cyan-700 py-2.5 rounded-lg font-semibold transition shadow-lg text-sm"
+            >
+              Login to Dashboard
+            </button>
+          </form>
+          {error && <p className="text-red-400 text-sm text-center">{error}</p>}
+        </div>
+      </div>
+    );
+  }
+
+  // -----------------------------------------
+  // DASHBOARD VIEW (After Successful Login)
+  // -----------------------------------------
   return (
     <div className="min-h-screen bg-gray-900 text-white p-8">
       <div className="max-w-4xl mx-auto space-y-8">
         <header className="border-b border-gray-800 pb-4 flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-cyan-400">SERVEXA - Operator Dashboard</h1>
-          <span className="text-xs bg-cyan-900/60 border border-cyan-500 px-3 py-1 rounded-full text-cyan-300">Live Kiosk Node</span>
+          <div>
+            <h1 className="text-2xl font-bold text-cyan-400">SERVEXA - Operator Dashboard</h1>
+            <span className="text-xs bg-cyan-900/60 border border-cyan-500 px-3 py-1 rounded-full text-cyan-300 mt-1 inline-block">Live Kiosk Node</span>
+          </div>
+          <button 
+            onClick={handleLogout}
+            className="bg-red-600/80 hover:bg-red-700 text-xs px-4 py-2 rounded-lg font-semibold transition shadow"
+          >
+            Logout
+          </button>
         </header>
 
         {/* PIN Verification Section with Request ID & PIN Inputs */}
@@ -125,7 +241,7 @@ export default function OperatorDashboard() {
             <button 
               type="submit" 
               disabled={loading}
-              className="w-full bg-cyan-600 hover:bg-cyan-700 py-2.5 rounded-lg font-semibold transition disabled:opacity-50 shadow-lg"
+              className="w-full bg-cyan-600 hover:bg-cyan-700 py-2.5 rounded-lg font-semibold transition disabled:opacity-50 shadow-lg text-sm"
             >
               {loading ? 'Verifying & Decrypting...' : 'Verify PIN & Load Document'}
             </button>
