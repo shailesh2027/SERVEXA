@@ -27,7 +27,7 @@ export default function CustomerPortal() {
 
     try {
       // Backend URL ke sath exact upload endpoint route yahan zaroor hona chahiye
-      const res = await fetch('https://servexa-ym6x.onrender.com/api/services/upload', {
+      const res = await fetch('https://servexa-backend-1qhw.onrender.com/api/services/upload', {
         method: 'POST',
         body: formData,
       });
