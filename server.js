@@ -3,21 +3,22 @@ const mongoose = require('mongoose');
 const cors = require('cors');  
 require('dotenv').config();  
 
-// Route Imports
-const serviceRoutes = require('./routes/serviceRoutes');
-const operatorRoutes = require('./routes/operatorRoutes');
-app.use('/api/operator', operatorRoutes);
+// 1. Initialize Express FIRST
 const app = express();  
 
-// Middleware  
+// 2. Middleware  
 app.use(express.json());  
 app.use(cors());  
 
-// Route Registration (Always before app.listen)
+// 3. Route Imports
+const serviceRoutes = require('./routes/serviceRoutes');
+const operatorRoutes = require('./routes/operatorRoutes');
+
+// 4. Route Registration (Always after app initialization)
 app.use('/api/services', serviceRoutes);
 app.use('/api/operator', operatorRoutes);
 
-// Database Connection  
+// 5. Database Connection & Port Setup  
 const PORT = process.env.PORT || 5000;  
 const MONGO_URI = process.env.MONGO_URI;  
 
