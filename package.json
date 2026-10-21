@@ -1,10 +1,13 @@
 {
   "dependencies": {
+    "autoprefixer": "^10.6.1",
     "cors": "^2.8.6",
     "dotenv": "^18.0.8",
     "express": "^5.3.0",
     "mongoose": "^9.11.2",
     "multer": "^2.4.0",
-    "razorpay": "^2.9.8"
+    "postcss": "^8.5.30",
+    "razorpay": "^2.9.8",
+    "tailwindcss": "^4.3.3"
   }
 }

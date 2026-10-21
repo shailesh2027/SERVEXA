@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const fs = require('fs');
+const path = require('path');
 const ServiceRequest = require('../models/ServiceRequest');
 const FileModel = require('../models/File');
 const { decryptFileBuffer } = require('../utils/encryption');
@@ -35,8 +36,23 @@ router.post('/verify-pin', async (req, res) => {
             return res.status(404).json({ success: false, message: 'Associated file record not found!' });
         }
 
-        // Read encrypted raw data as string/buffer cleanly
-        const encryptedHex = fs.readFileSync(fileRecord.encryptedStoragePath, 'utf8').trim();
+        // Robust Path Resolution: Check multiple possible locations for the vault file
+        const fileName = path.basename(fileRecord.encryptedStoragePath);
+        const possiblePaths = [
+            fileRecord.encryptedStoragePath,
+            path.join(process.cwd(), fileRecord.encryptedStoragePath),
+            path.join(process.cwd(), 'vault', fileName),
+            path.join(__dirname, '../vault', fileName)
+        ];
+
+        let fullFilePath = possiblePaths.find(p => fs.existsSync(p));
+
+        if (!fullFilePath || !fs.existsSync(fullFilePath)) {
+            return res.status(404).json({ success: false, message: 'Encrypted file missing from vault storage!' });
+        }
+
+        // Read encrypted file from disk vault
+        const encryptedHex = fs.readFileSync(fullFilePath, 'utf8').trim();
         
         // Decrypt file buffer using AES-256
         const decryptedBuffer = decryptFileBuffer(encryptedHex, fileRecord.encryptionIV);
@@ -58,5 +74,37 @@ router.post('/verify-pin', async (req, res) => {
         res.status(500).json({ success: false, error: error.message });
     }
 });
-    
+
+// 3. Mark Request as Completed & Trigger Permanent Purge
+router.post('/complete/:id', async (req, res) => {
+    try {
+        const request = await ServiceRequest.findById(req.params.id);
+        if (!request) {
+            return res.status(404).json({ success: false, message: 'Request not found!' });
+        }
+
+        // Find and permanently delete the physical encrypted file
+        const fileRecord = await FileModel.findOne({ requestId: request._id });
+        if (fileRecord) {
+            const fileName = path.basename(fileRecord.encryptedStoragePath);
+            const fullFilePath = path.join(__dirname, '../vault', fileName);
+            if (fs.existsSync(fullFilePath)) {
+                fs.unlinkSync(fullFilePath); 
+            }
+            await FileModel.deleteOne({ _id: fileRecord._id });
+        }
+
+        request.status = 'Completed';
+        await request.save();
+
+        res.status(200).json({ 
+            success: true, 
+            message: 'Job completed successfully! Encrypted files and logs permanently purged.' 
+        });
+
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
 module.exports = router;
