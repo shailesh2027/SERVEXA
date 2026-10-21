@@ -12,7 +12,8 @@ export default function OperatorDashboard() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const API_BASE = 'https://servexa-ym6x.onrender.com';
+  // Naya Live Render Backend URL
+  const API_BASE = 'https://servexa-backend-1qhw.onrender.com';
 
   // Check login status on component mount
   useEffect(() => {
@@ -54,7 +55,7 @@ export default function OperatorDashboard() {
     setVerificationResult(null);
   };
 
-  // 1. Live Queue Fetch Karne Ke Liye (With Authorization Header)
+  // 1. Live Queue Fetch Karne Ke Liye
   const fetchQueue = async (token = localStorage.getItem('operatorToken')) => {
     try {
       const res = await fetch(`${API_BASE}/api/operator/queue`, {
@@ -64,7 +65,7 @@ export default function OperatorDashboard() {
       if (res.ok) {
         setQueue(data.data || []);
       } else if (res.status === 401 || res.status === 403) {
-        handleLogout(); // Token expired or unauthorized
+        handleLogout();
       }
     } catch (err) {
       console.error('Failed to fetch queue', err);
@@ -146,9 +147,7 @@ export default function OperatorDashboard() {
     }
   };
 
-  // -----------------------------------------
-  // LOGIN SCREEN (Agar Operator Logged In Nahi Hai)
-  // -----------------------------------------
+  // LOGIN SCREEN
   if (!isLoggedIn) {
     return (
       <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center p-4">
@@ -193,9 +192,7 @@ export default function OperatorDashboard() {
     );
   }
 
-  // -----------------------------------------
-  // DASHBOARD VIEW (After Successful Login)
-  // -----------------------------------------
+  // DASHBOARD VIEW
   return (
     <div className="min-h-screen bg-gray-900 text-white p-8">
       <div className="max-w-4xl mx-auto space-y-8">
@@ -212,7 +209,7 @@ export default function OperatorDashboard() {
           </button>
         </header>
 
-        {/* PIN Verification Section with Request ID & PIN Inputs */}
+        {/* PIN Verification Section */}
         <div className="bg-gray-800 p-6 rounded-2xl shadow-lg border border-gray-700">
           <h2 className="text-lg font-semibold mb-4 text-cyan-300">Verify Customer Service PIN</h2>
           <form onSubmit={handleVerifyPin} className="space-y-4">
@@ -249,7 +246,7 @@ export default function OperatorDashboard() {
           {error && <p className="text-red-400 text-sm mt-2">{error}</p>}
         </div>
 
-        {/* Verification Result / Decrypted File Viewer */}
+        {/* Verification Result Viewer */}
         {verificationResult && (
           <div className="bg-gray-800 p-6 rounded-2xl shadow-lg border border-green-500/50 space-y-4">
             <h3 className="text-lg font-bold text-green-400">PIN Verified Successfully!</h3>
@@ -277,7 +274,7 @@ export default function OperatorDashboard() {
           </div>
         )}
 
-        {/* Live Active Service Queue (Clickable Items) */}
+        {/* Live Active Service Queue */}
         <div className="bg-gray-800 p-6 rounded-2xl shadow-lg border border-gray-700">
           <h2 className="text-lg font-semibold mb-4 text-cyan-300">Active Service Queue (Click to Select)</h2>
           {queue.length === 0 ? (
