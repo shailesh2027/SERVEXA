@@ -87,8 +87,15 @@ router.post('/complete/:id', async (req, res) => {
         const fileRecord = await FileModel.findOne({ requestId: request._id });
         if (fileRecord) {
             const fileName = path.basename(fileRecord.encryptedStoragePath);
-            const fullFilePath = path.join(__dirname, '../vault', fileName);
-            if (fs.existsSync(fullFilePath)) {
+            const possiblePaths = [
+                fileRecord.encryptedStoragePath,
+                path.join(process.cwd(), fileRecord.encryptedStoragePath),
+                path.join(process.cwd(), 'vault', fileName),
+                path.join(__dirname, '../vault', fileName)
+            ];
+            const fullFilePath = possiblePaths.find(p => fs.existsSync(p));
+
+            if (fullFilePath && fs.existsSync(fullFilePath)) {
                 fs.unlinkSync(fullFilePath); 
             }
             await FileModel.deleteOne({ _id: fileRecord._id });
