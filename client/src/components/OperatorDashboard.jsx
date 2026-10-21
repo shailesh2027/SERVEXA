@@ -11,7 +11,7 @@ export default function OperatorDashboard() {
   // 1. Live Queue Fetch Karne Ke Liye
   const fetchQueue = async () => {
     try {
-      const res = await fetch('https://congenial-zebra-wr4x497pqv6phg7g5-5000.app.github.dev/api/operator/queue');
+      const res = await fetch('https://servexa-ym6x.onrender.com/api/operator/queue');
       const data = await res.json();
       if (res.ok) {
         setQueue(data.data || []);
@@ -47,7 +47,7 @@ export default function OperatorDashboard() {
     setVerificationResult(null);
 
     try {
-      const res = await fetch('https://congenial-zebra-wr4x497pqv6phg7g5-5000.app.github.dev/api/operator/verify-pin', {
+      const res = await fetch('https://servexa-ym6x.onrender.com/api/operator/verify-pin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ requestId, enteredPIN }),
@@ -69,7 +69,7 @@ export default function OperatorDashboard() {
   // 3. Job Complete & Vault Purge Karne Ke Liye
   const handleComplete = async (id) => {
     try {
-      const res = await fetch(`https://congenial-zebra-wr4x497pqv6phg7g5-5000.app.github.dev/api/operator/complete/${id}`, {
+      const res = await fetch(`https://servexa-ym6x.onrender.com/api/operator/complete/${id}`, {
         method: 'POST',
       });
 
